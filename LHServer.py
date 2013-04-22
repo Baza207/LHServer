@@ -60,28 +60,31 @@ class LHServerFactory(Factory):
 
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
+	def __init__(self):
+		self.uniqueID = hash(self)
+
 	def connectionMade(self):
 		self.factory.clients.append(self)
-		# log("Client connected: %s" % hash(self))
+		# log("Client connected: %s" % self.uniqueID)
 
 	def connectionLost(self, reason):
 		clientDict = {}
 		try:
-			clientDict = self.factory.users[hash(self)]
+			clientDict = self.factory.users[self.uniqueID]
 		except:
 			pass
 		finally:
 			log("%s has left" % clientDict[kName])
 
-		try:
-			del self.factory.users[hash(self)]
-		except:
-			pass
-		finally:
-			self.factory.clients.remove(self)
-			broadcastUserList()
+			try:
+				del self.factory.users[self.uniqueID]
+				self.factory.clients.remove(self)
+			except:
+				pass
+			finally:
+				broadcastUserList()
 
-		# log("Client disconnected: %s" % hash(self))
+		# log("Client disconnected: %s" % self.uniqueID)
 
 	def dataReceived(self, data):
 		clientDict = {}
@@ -94,17 +97,18 @@ class LHServerProtocol(Protocol):
 			data = jsonDict[kData]
 			uuid = jsonDict[kUUID]
 
+			try:
+				clientDict = self.factory.users[self.uniqueID]
+			except:
+				log("%s has joined" % data[kName])
+
 			if command == kGroupChat:
 				broadcastChat(self, data)
 			elif command == kRegister:
-				try:
-					clientDict = self.factory.users[hash(self)]
-				except:
-					log("%s has joined" % data[kName])
 				clientDict[kUUID] = uuid
 				clientDict[kName] = data[kName]
 
-		self.factory.users[hash(self)] = clientDict
+		self.factory.users[self.uniqueID] = clientDict
 
 		if command == kRegister:
 			broadcastUserList()
@@ -118,12 +122,12 @@ def broadcastUserList():
 	users = factory.users
 
 	for client in factory.clients:
-		if hash(client) in factory.users:
+		if client.uniqueID in factory.users:
 			client.broadcast(users, kUserList)
 
 def broadcastChat(client, chatDict):
 	for client in factory.clients:
-		if hash(client) in factory.users:
+		if client.uniqueID in factory.users:
 			client.broadcast(chatDict, kGroupChat)
 
 if __name__ == '__main__':

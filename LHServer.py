@@ -1,4 +1,5 @@
 import sys, json, ConfigParser
+import MySQLdb
 from datetime import datetime
 from twisted.internet import reactor, stdio
 from twisted.internet.protocol import Factory, Protocol
@@ -61,56 +62,60 @@ class LHServerFactory(Factory):
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
 	def __init__(self):
-		self.uniqueID = hash(self)
+		self.username = ''
 
 	def connectionMade(self):
 		self.factory.clients.append(self)
-		# log("Client connected: %s" % self.uniqueID)
+		log("Client connected: %s" % self)
 
 	def connectionLost(self, reason):
 		clientDict = {}
+
+		if self.username != '':
+			log("%s has left" % self.username)
+		else
+			log("Client has left")
+
 		try:
-			clientDict = self.factory.users[self.uniqueID]
-		except:
+			self.factory.clients.remove(self)
+		except :
 			pass
-		finally:
-			log("%s has left" % clientDict[kName])
 
-			try:
-				del self.factory.users[self.uniqueID]
-				self.factory.clients.remove(self)
-			except:
-				pass
-			finally:
-				broadcastUserList()
-
-		# log("Client disconnected: %s" % self.uniqueID)
+		log("Client disconnected: %s" % self)
 
 	def dataReceived(self, data):
 		clientDict = {}
+		loginPass = False
 
 		jsonDict = json.loads(data)
 		command = jsonDict[kCommand]
-		# log("Command: " + command)
+		log("Command: " + command)
 
 		if command:
 			data = jsonDict[kData]
-			uuid = jsonDict[kUUID]
 
 			try:
-				clientDict = self.factory.users[self.uniqueID]
+				clientDict = self.factory.users[self.username]
 			except:
-				log("%s has joined" % data[kName])
+				log("%s has joined" % data[kUsername])
 
 			if command == kGroupChat:
-				broadcastChat(self, data)
-			elif command == kRegister:
-				clientDict[kUUID] = uuid
-				clientDict[kName] = data[kName]
+				broadcastChat(self, data, kGroupChat)
+			elif command == kStartType:
+				broadcastChat(self, data, kStartType)
+			elif command == kEndType:
+				broadcastChat(self, data, kEndType)
+			elif command == kLogin:
+				usr = str(data[kUsername])
+				pswd = str(data[kPassword])
+				loginPass = loginUserFromDatabase(usr, pswd)
 
-		self.factory.users[self.uniqueID] = clientDict
+				if loginPass:
+					self.username = usr
 
-		if command == kRegister:
+		self.factory.users[self.username] = clientDict
+
+		if command == kLogin and loginPass:
 			broadcastUserList()
 
 	def broadcast(self, message, command):
@@ -122,13 +127,37 @@ def broadcastUserList():
 	users = factory.users
 
 	for client in factory.clients:
-		if client.uniqueID in factory.users:
+		if client.username in factory.users:
 			client.broadcast(users, kUserList)
 
-def broadcastChat(client, chatDict):
+def broadcastChat(client, chatDict, command):
 	for client in factory.clients:
-		if client.uniqueID in factory.users:
-			client.broadcast(chatDict, kGroupChat)
+		if client.username in factory.users:
+			client.broadcast(chatDict, command)
+
+def loginUserFromDatabase(usr, pswd):
+	db = MySQLdb.connect(host = "localhost", user = dbUsername, passwd = dbPassword, db = dbName, port = 3306)
+	db.query("SELECT * FROM users WHERE username='%s' AND password = '%s'" % (usr, pswd))
+	result = db.store_result()
+	data = result.fetch_row(0, 1)
+	db.close()
+
+	if len(data) == 1:
+		log("Loged in")
+		return True
+	else:
+		log("Login failed")
+		return False
+
+	log("Database result: %s" % str(data))
+
+def logoutUser(usr):
+	try:
+		del self.factory.users[usr]
+	except:
+		pass
+	finally:
+		broadcastUserList()
 
 if __name__ == '__main__':
 	config=ConfigParser.ConfigParser()

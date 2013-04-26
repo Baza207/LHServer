@@ -73,15 +73,13 @@ class LHServerProtocol(Protocol):
 
 		if self.username != '':
 			log("%s has left" % self.username)
-		else
-			log("Client has left")
 
 		try:
 			self.factory.clients.remove(self)
 		except :
 			pass
 
-		log("Client disconnected: %s" % self)
+		# log("Client disconnected: %s" % self)
 
 	def dataReceived(self, data):
 		clientDict = {}
@@ -89,15 +87,10 @@ class LHServerProtocol(Protocol):
 
 		jsonDict = json.loads(data)
 		command = jsonDict[kCommand]
-		log("Command: " + command)
+		# log("Command: " + command)
 
 		if command:
 			data = jsonDict[kData]
-
-			try:
-				clientDict = self.factory.users[self.username]
-			except:
-				log("%s has joined" % data[kUsername])
 
 			if command == kGroupChat:
 				broadcastChat(self, data, kGroupChat)
@@ -113,6 +106,21 @@ class LHServerProtocol(Protocol):
 				if loginPass:
 					self.username = usr
 
+					del loginPass[kPassword]
+
+					try:
+						clientDict = self.factory.users[self.username]
+					except:
+						pass
+
+					if clientDict == {}:
+						clientDict = loginPass
+
+					self.broadcast(True, kLoginResponse)
+					log("%s has joined" % self.username)
+				else:
+					self.broadcast(False, kLoginResponse)
+
 		self.factory.users[self.username] = clientDict
 
 		if command == kLogin and loginPass:
@@ -121,7 +129,8 @@ class LHServerProtocol(Protocol):
 	def broadcast(self, message, command):
 		tempDict = {kCommand:command, kData: message}
 		jsonString = json.dumps(tempDict)
-		self.transport.write(jsonString)
+		# log("JSON string: %s" % jsonString)
+		self.transport.write(jsonString + '\r\n')
 
 def broadcastUserList():
 	users = factory.users
@@ -143,10 +152,8 @@ def loginUserFromDatabase(usr, pswd):
 	db.close()
 
 	if len(data) == 1:
-		log("Loged in")
-		return True
+		return data[0]
 	else:
-		log("Login failed")
 		return False
 
 	log("Database result: %s" % str(data))

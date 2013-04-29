@@ -79,22 +79,12 @@ class LHServerProtocol(Protocol):
 		# log("Client connected: %s" % self)
 
 	def connectionLost(self, reason):
-		clientDict = {}
-
-		if self.username != '':
-			broadcastServerChat("%s has left" % self.username)
-
 		try:
 			self.factory.clients.remove(self)
 		except :
 			pass
 
-		try:
-			del self.factory.users[self.username]
-		except :
-			pass
-		finally:
-			broadcastUserList()
+		logoutUser(self, self.username)
 
 		# log("Client disconnected: %s" % self)
 
@@ -130,11 +120,15 @@ class LHServerProtocol(Protocol):
 					except:
 						pass
 
+					self.broadcast(True, kLoginResponse)
+
 					if clientDict == {}:
 						clientDict = loginPass
+						clientDict[kClientCount] = 1
+						broadcastServerChat("%s has joined" % self.username)
+					else:
+						clientDict[kClientCount] = clientDict[kClientCount] +1
 
-					self.broadcast(True, kLoginResponse)
-					broadcastServerChat("%s has joined" % self.username)
 				else:
 					self.broadcast(False, kLoginResponse)
 			elif command == kLogout:
@@ -179,14 +173,23 @@ def loginUserFromDatabase(usr, pswd):
 	log("Database result: %s" % str(data))
 
 def logoutUser(client, usr):
-	broadcastServerChat("%s has left" % usr)
+	clientDict = {}
 	try:
-		del factory.users[usr]
+		clientDict = factory.users[client.username]
 	except:
 		pass
 	finally:
-		client.broadcast(True, kLogoutResponse)
-		broadcastUserList()
+		if clientDict != {}:
+			clientDict[kClientCount] = clientDict[kClientCount] -1
+			if clientDict[kClientCount] <= 0:
+				try:
+					del factory.users[usr]
+				except:
+					pass
+				finally:
+					broadcastUserList()
+					broadcastServerChat("%s has left" % usr)
+					client.broadcast(True, kLogoutResponse)
 
 if __name__ == '__main__':
 	config=ConfigParser.ConfigParser()

@@ -20,6 +20,8 @@ def consoleInput(line):
 		onlineClients()
 	elif line == 'online':
 		onlineUsers()
+	# elif line == 'broadcast'
+
 	elif line == 'help' or line == '?':
 		helpLog()
 
@@ -34,6 +36,14 @@ def onlineClients():
 
 def onlineUsers():
 	log("Online users: %s" % factory.users)
+
+def broadcastServerChat(chat):
+	log(chat)
+	chatDict = {kChat:chat, kTimestamp:timestamp() + ' GMT', kChatType:kServerChat}
+
+	for client in factory.clients:
+		if client.username in factory.users:
+			client.broadcast(chatDict, kChatBroadcast)
 
 def helpLog():
 	log("stop	 - Stops the server")
@@ -50,7 +60,7 @@ def log(message):
 
 def timestamp():
 	now = datetime.now()
-	return now.strftime("%Y-%m-%d %H:%M:%S")
+	return now.strftime(TIMESTAMP_FORMAT)
 
 # Class for setting up custom Twisted Factory object
 class LHServerFactory(Factory):
@@ -66,18 +76,25 @@ class LHServerProtocol(Protocol):
 
 	def connectionMade(self):
 		self.factory.clients.append(self)
-		log("Client connected: %s" % self)
+		# log("Client connected: %s" % self)
 
 	def connectionLost(self, reason):
 		clientDict = {}
 
 		if self.username != '':
-			log("%s has left" % self.username)
+			broadcastServerChat("%s has left" % self.username)
 
 		try:
 			self.factory.clients.remove(self)
 		except :
 			pass
+
+		try:
+			del self.factory.users[self.username]
+		except :
+			pass
+		finally:
+			broadcastUserList()
 
 		# log("Client disconnected: %s" % self)
 
@@ -92,8 +109,8 @@ class LHServerProtocol(Protocol):
 		if command:
 			data = jsonDict[kData]
 
-			if command == kGroupChat:
-				broadcastChat(self, data, kGroupChat)
+			if command == kChatBroadcast:
+				broadcastChat(self, data, kChatBroadcast)
 			elif command == kStartType:
 				broadcastChat(self, data, kStartType)
 			elif command == kEndType:
@@ -117,11 +134,12 @@ class LHServerProtocol(Protocol):
 						clientDict = loginPass
 
 					self.broadcast(True, kLoginResponse)
-					log("%s has joined" % self.username)
+					broadcastServerChat("%s has joined" % self.username)
 				else:
 					self.broadcast(False, kLoginResponse)
 
-		self.factory.users[self.username] = clientDict
+		if clientDict:
+			self.factory.users[self.username] = clientDict
 
 		if command == kLogin and loginPass:
 			broadcastUserList()

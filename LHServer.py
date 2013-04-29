@@ -137,6 +137,8 @@ class LHServerProtocol(Protocol):
 					broadcastServerChat("%s has joined" % self.username)
 				else:
 					self.broadcast(False, kLoginResponse)
+			elif command == kLogout:
+				logoutUser(self, str(data))
 
 		if clientDict:
 			self.factory.users[self.username] = clientDict
@@ -176,12 +178,14 @@ def loginUserFromDatabase(usr, pswd):
 
 	log("Database result: %s" % str(data))
 
-def logoutUser(usr):
+def logoutUser(client, usr):
+	broadcastServerChat("%s has left" % usr)
 	try:
-		del self.factory.users[usr]
+		del factory.users[usr]
 	except:
 		pass
 	finally:
+		client.broadcast(True, kLogoutResponse)
 		broadcastUserList()
 
 if __name__ == '__main__':

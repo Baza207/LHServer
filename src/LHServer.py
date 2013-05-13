@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys, json, ConfigParser
 import MySQLdb
 from datetime import datetime

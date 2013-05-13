@@ -26,7 +26,7 @@ def consoleInput(line):
 		helpLog()
 
 def stopServer():
-	log("Stopping server")
+	log("Stopping LHServer")
 	sys.stdout.write("\r")
 	sys.stdout.flush()
 	reactor.stop()
@@ -49,7 +49,7 @@ def helpLog():
 	log("stop	 - Stops the server")
 	log("clients	 - Shows current clients")
 	log("online	 - Shows online users")
-	log("help	 - Displays this help")
+	log("help/?	 - Displays this help")
 
 def log(message):
 	if message != "":
@@ -193,14 +193,16 @@ def logoutUser(client, usr):
 
 if __name__ == '__main__':
 	config=ConfigParser.ConfigParser()
-	config.read(['config.txt'])
-	port = config.getint('Properties', 'port')
-	dbUsername = config.get('Properties', 'dbUsername')
-	dbPassword = config.get('Properties', 'dbPassword')
-	dbName = config.get('Properties', 'dbName')
+	if config.read(['config.txt']):
+		port = config.getint(kProperties, 'port')
+		dbUsername = config.get(kProperties, 'dbUsername')
+		dbPassword = config.get(kProperties, 'dbPassword')
+		dbName = config.get(kProperties, 'dbName')
 
-	stdio.StandardIO(Echo())
-	factory = LHServerFactory()
-	reactor.listenTCP(port, factory)
-	log("Server started")
-	reactor.run()
+		stdio.StandardIO(Echo())
+		factory = LHServerFactory()
+		reactor.listenTCP(port, factory)
+		log("LHServer started")
+		reactor.run()
+	else:
+		log("No config.txt file found! Ending LHServer")

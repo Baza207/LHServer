@@ -24,3 +24,5 @@ kServerChat		= 'serverChat'
 kPrivateChat		= 'privateChat'
 kChat				= 'chat'
 kTimestamp		= 'timestamp'
+
+kProperties		= 'Properties'

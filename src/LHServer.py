@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import sys, json, ConfigParser
 import MySQLdb
 from datetime import datetime
@@ -5,6 +6,8 @@ from twisted.internet import reactor, stdio
 from twisted.internet.protocol import Factory, Protocol
 from twisted.protocols import basic
 from LHServerKeys import *
+
+debug = True
 
 # Class for getting input from the console
 class Echo(basic.LineReceiver):
@@ -76,7 +79,8 @@ class LHServerProtocol(Protocol):
 
 	def connectionMade(self):
 		self.factory.clients.append(self)
-		# log("Client connected: %s" % self)
+		if debug:
+			log("Client connected: %s" % self)
 
 	def connectionLost(self, reason):
 		try:
@@ -85,16 +89,20 @@ class LHServerProtocol(Protocol):
 			pass
 
 		logoutUser(self, self.username)
-
-		# log("Client disconnected: %s" % self)
+		if debug:
+			log("Client disconnected: %s" % self)
 
 	def dataReceived(self, data):
 		clientDict = {}
 		loginPass = False
-
-		jsonDict = json.loads(data)
+		try:
+			jsonDict = json.loads(data)
+		except ValueError as e:
+			log(e)
+			return
 		command = jsonDict[kCommand]
-		# log("Command: " + command)
+		if debug:
+			log("Command: " + command)
 
 		if command:
 			data = jsonDict[kData]
@@ -143,7 +151,8 @@ class LHServerProtocol(Protocol):
 	def broadcast(self, message, command):
 		tempDict = {kCommand:command, kData: message}
 		jsonString = json.dumps(tempDict)
-		# log("JSON string: %s" % jsonString)
+		if debug:
+			log("JSON string: %s" % jsonString)
 		self.transport.write(jsonString + '\r\n')
 
 def broadcastUserList():

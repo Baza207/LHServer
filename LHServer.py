@@ -106,7 +106,7 @@ class LHServerProtocol(Protocol):
 			elif command == kEndType:
 				broadcastChat(self, data, kEndType)
 			elif command == kLogin:
-				usr = str(data[kUsername])
+				usr = str(data[kUsername]).lower()
 				pswd = str(data[kPassword])
 				loginPass = loginUserFromDatabase(usr, pswd)
 
@@ -195,6 +195,9 @@ if __name__ == '__main__':
 	config=ConfigParser.ConfigParser()
 	config.read(['config.txt'])
 	port = config.getint('Properties', 'port')
+	dbUsername = config.get('Properties', 'dbUsername')
+	dbPassword = config.get('Properties', 'dbPassword')
+	dbName = config.get('Properties', 'dbName')
 
 	stdio.StandardIO(Echo())
 	factory = LHServerFactory()

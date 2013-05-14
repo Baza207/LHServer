@@ -9,26 +9,6 @@ from LHServerKeys import *
 
 debug = True
 
-# Class for getting input from the console
-class Echo(basic.LineReceiver):
-	from os import linesep as delimiter
-
-	def lineReceived(self, line):
-		consoleInput(line)
-
-def consoleInput(line):
-	if line == 'stop':
-		stopServer()
-	elif line == 'clients':
-		onlineClients()
-	elif line == 'online':
-		onlineUsers()
-	# elif line == 'broadcast'
-
-	elif line == 'help' or line == '?':
-		helpLog()
-	else:
-		log('Invalid command "%s"' % line)
 
 def stopServer():
 	log("Stopping LHServer")
@@ -42,7 +22,8 @@ def onlineClients():
 def onlineUsers():
 	log("Online users: %s" % factory.users)
 
-def broadcastServerChat(chat):
+def broadcastServerChat(*args):
+	chat = ' '.join(args)
 	log(chat)
 	chatDict = {kChat:chat, kTimestamp:timestamp() + ' GMT', kChatType:kServerChat}
 
@@ -52,10 +33,37 @@ def broadcastServerChat(chat):
 
 def helpLog():
 	'''Print help message'''
-	log("stop	 - Stops the server")
-	log("clients	 - Shows current clients")
-	log("online	 - Shows online users")
-	log("help/?	 - Displays this help")
+	log("stop            - Stops the server")
+	log("clients         - Shows current clients")
+	log("online          - Shows online users")
+	log("broadcast msg   - Send a message to every client")
+	log("help/?          - Displays this help")
+
+# Class for getting input from the console
+class Echo(basic.LineReceiver):
+	from os import linesep as delimiter
+
+	command_list = {
+		    'stop': stopServer,
+		    'clients': onlineClients,
+		    'online': onlineUsers,
+		    'help': helpLog,
+		    '?': helpLog,
+		    'broadcast': broadcastServerChat
+	    }
+
+	def lineReceived(self, line):
+		args = line.split(' ')
+		cmd = args.pop(0)
+		if self.command_list.has_key(cmd):
+			# Call the function with the rest as arguments
+			try:
+				self.command_list[cmd](*args)
+			except TypeError as e:
+				log(e)
+		else:
+			log('Invalid command "%s"' % line)
+
 
 def log(message):
 	'''Basic logging to stdout'''

@@ -76,6 +76,11 @@ class LHServerFactory(Factory):
 		for client in self.clients:
 			if client.username in self.users:
 				client.broadcast(chatDict, command)
+	
+	def broadcastUserList(self):
+		for client in self.clients:
+			if client.username in self.users:
+				client.broadcast(self.users, kUserList)
 
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
@@ -151,7 +156,7 @@ class LHServerProtocol(Protocol):
 			self.factory.users[self.username] = clientDict
 
 		if command == kLogin and loginPass:
-			broadcastUserList()
+			self.factory.broadcastUserList()
 
 	def broadcast(self, message, command):
 		tempDict = {kCommand:command, kData: message}
@@ -159,13 +164,6 @@ class LHServerProtocol(Protocol):
 		if debug:
 			log("JSON string: %s" % jsonString)
 		self.transport.write(jsonString + '\r\n')
-
-def broadcastUserList():
-	users = factory.users
-
-	for client in factory.clients:
-		if client.username in factory.users:
-			client.broadcast(users, kUserList)
 
 def loginUserFromDatabase(usr, pswd):
 	db = MySQLdb.connect(host = "localhost", user = dbUsername, passwd = dbPassword, db = dbName, port = 3306)
@@ -196,7 +194,7 @@ def logoutUser(client, usr):
 				except:
 					pass
 				finally:
-					broadcastUserList()
+					factory.broadcastUserList()
 					broadcastServerChat("%s has left" % usr)
 					client.broadcast(True, kLogoutResponse)
 

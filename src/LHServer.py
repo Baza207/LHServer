@@ -71,6 +71,11 @@ class LHServerFactory(Factory):
 		self.clients = []
 		self.users = {}
 		self.protocol = LHServerProtocol
+	
+	def broadcastChat(self, chatDict, command):
+		for client in self.clients:
+			if client.username in self.users:
+				client.broadcast(chatDict, command)
 
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
@@ -108,11 +113,11 @@ class LHServerProtocol(Protocol):
 			data = jsonDict[kData]
 
 			if command == kChatBroadcast:
-				broadcastChat(self, data, kChatBroadcast)
+				self.factory.broadcastChat(data, kChatBroadcast)
 			elif command == kStartType:
-				broadcastChat(self, data, kStartType)
+				self.factory.broadcastChat(data, kStartType)
 			elif command == kEndType:
-				broadcastChat(self, data, kEndType)
+				self.broadcastChat(data, kEndType)
 			elif command == kLogin:
 				usr = str(data[kUsername]).lower()
 				pswd = str(data[kPassword])
@@ -161,11 +166,6 @@ def broadcastUserList():
 	for client in factory.clients:
 		if client.username in factory.users:
 			client.broadcast(users, kUserList)
-
-def broadcastChat(client, chatDict, command):
-	for client in factory.clients:
-		if client.username in factory.users:
-			client.broadcast(chatDict, command)
 
 def loginUserFromDatabase(usr, pswd):
 	db = MySQLdb.connect(host = "localhost", user = dbUsername, passwd = dbPassword, db = dbName, port = 3306)

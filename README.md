@@ -7,20 +7,20 @@ In the future the server will allow users to connect through different types of 
 NOTE: This is currently in pre-alpha and not all features are implimented.
 
 ### Current Features
-• Basic authentication of clients with database,  
-• Sending messages from client to server,  
-• Broadcasting group chat messages to all autenticated clients,  
-• Broadcasting sever messages to clients.  
+- Basic authentication of clients with database,  
+- Sending messages from client to server,  
+- Broadcasting group chat messages to all autenticated clients,  
+- Broadcasting sever messages to clients.  
 
 ###Roadmap
-Coming Soon!
+Read the roadmap [here!](https://github.com/Baza207/LHServer/blob/master/ROADMAP.md)
 
 ## Prerequisites
 
 LHServer is written on Python 2.6 with the following extra libraries:
 
-• MySQLdb  
-• Twisted
+- MySQLdb  
+- Twisted
 
 Users are stored in a MySQL database, the structure of which is described below.
 

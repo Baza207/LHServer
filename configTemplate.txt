@@ -1,8 +1,8 @@
-// NOTE:	You MUST rename this file 'config.txt' before starting the server!
+; NOTE:	You MUST rename this file 'config.txt' before starting the server!
 
 [Properties]
-port: 25552			// The port your server uses (the default is 25552)
+port: 25552			; The port your server uses (the default is 25552)
 
-dbUsername: 'XYZ'		// The username for your MySQL database
-dbPassword: 'XYZ'		// The password for your MySQL database
-dbName: 'XYZ'			// The name of your MySQL database
+dbUsername: XYZ		; The username for your MySQL database
+dbPassword: XYZ		; The password for your MySQL database
+dbName: XYZ			; The name of your MySQL database

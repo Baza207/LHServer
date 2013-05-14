@@ -27,6 +27,8 @@ def consoleInput(line):
 
 	elif line == 'help' or line == '?':
 		helpLog()
+	else:
+		log('Invalid command "%s"' % line)
 
 def stopServer():
 	log("Stopping LHServer")
@@ -49,12 +51,14 @@ def broadcastServerChat(chat):
 			client.broadcast(chatDict, kChatBroadcast)
 
 def helpLog():
+	'''Print help message'''
 	log("stop	 - Stops the server")
 	log("clients	 - Shows current clients")
 	log("online	 - Shows online users")
 	log("help/?	 - Displays this help")
 
 def log(message):
+	'''Basic logging to stdout'''
 	if message != "":
 		sys.stdout.write("\r")
 		sys.stdout.flush()
@@ -67,6 +71,8 @@ def timestamp():
 
 # Class for setting up custom Twisted Factory object
 class LHServerFactory(Factory):
+	'''Server object'''
+	
 	def __init__(self):
 		self.clients = []
 		self.users = {}
@@ -84,15 +90,19 @@ class LHServerFactory(Factory):
 
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
+	'''Client object'''
+	
 	def __init__(self):
 		self.username = ''
 
 	def connectionMade(self):
+		'''Called when a connection is made.'''
 		self.factory.clients.append(self)
 		if debug:
 			log("Client connected: %s" % self)
 
 	def connectionLost(self, reason):
+		'''Called when the connection is shut down.'''
 		try:
 			self.factory.clients.remove(self)
 		except :
@@ -103,6 +113,7 @@ class LHServerProtocol(Protocol):
 			log("Client disconnected: %s" % self)
 
 	def dataReceived(self, data):
+		'''Called whenever data is received.'''
 		clientDict = {}
 		loginPass = False
 		try:
@@ -159,6 +170,7 @@ class LHServerProtocol(Protocol):
 			self.factory.broadcastUserList()
 
 	def broadcast(self, message, command):
+		'''Send message to client'''
 		tempDict = {kCommand:command, kData: message}
 		jsonString = json.dumps(tempDict)
 		if debug:
@@ -166,6 +178,7 @@ class LHServerProtocol(Protocol):
 		self.transport.write(jsonString + '\r\n')
 
 def loginUserFromDatabase(usr, pswd):
+	'''Basic authentication'''
 	db = MySQLdb.connect(host = "localhost", user = dbUsername, passwd = dbPassword, db = dbName, port = 3306)
 	db.query("SELECT * FROM users WHERE username='%s' AND password = '%s'" % (usr, pswd))
 	result = db.store_result()

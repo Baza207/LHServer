@@ -12,7 +12,6 @@ debug = True
 
 def stopServer():
 	log("Stopping LHServer")
-	sys.stdout.write("\r")
 	sys.stdout.flush()
 	reactor.stop()
 
@@ -39,8 +38,9 @@ def helpLog():
 	log("broadcast msg   - Send a message to every client")
 	log("help/?          - Displays this help")
 
-# Class for getting input from the console
+
 class Echo(basic.LineReceiver):
+	'''Class for getting input from the console'''
 	from os import linesep as delimiter
 
 	command_list = {
@@ -220,17 +220,53 @@ def logoutUser(client, usr):
 					client.broadcast(True, kLogoutResponse)
 
 if __name__ == '__main__':
-	config=ConfigParser.ConfigParser()
+	
+	defaults = {'port': '25552',
+				'dbUsername':'',
+				'dbPassword':'',
+				'dbName':''}
+	
+	# config.txt settings
+	config=ConfigParser.ConfigParser(defaults)
 	if config.read(['config.txt']):
-		port = config.getint(kProperties, 'port')
-		dbUsername = config.get(kProperties, 'dbUsername')
-		dbPassword = config.get(kProperties, 'dbPassword')
-		dbName = config.get(kProperties, 'dbName')
+		defaults = dict(config.items("Properties"))
+		
+	# Command line settings
+	try:
+		# For python2.6 this will not work by default
+		import argparse
+		parser = argparse.ArgumentParser()
+		# Use the configparser's settings as defaults
+		parser.set_defaults(**defaults)
+		parser.add_argument("--port", "-P",
+					help="Port to listen to, defaults to 25552", dest='port')
+		parser.add_argument("--username", "-u",
+					help="The username", dest='dbusername')
+		parser.add_argument("--password", "-p",
+					help="The password", dest='dbpassword')
+		parser.add_argument("--db", "-d", help="Database", dest='dbname')
+		args = parser.parse_args()
 
-		stdio.StandardIO(Echo())
-		factory = LHServerFactory()
-		reactor.listenTCP(port, factory)
-		log("LHServer started")
-		reactor.run()
-	else:
-		log("No config.txt file found! Ending LHServer")
+		port = int(args.port)
+		dbUsername = args.dbusername
+		dbPassword = args.dbpassword
+		dbName = args.dbname
+	except Exception as e:
+		print 'ERROR',e
+		# argparse not found
+		print defaults
+		port = int(defaults['port'])
+		dbUsername = defaults['dbusername']
+		dbPassword = defaults['dbpassword']
+		dbName = defaults['dbname']
+	
+	
+	stdio.StandardIO(Echo())
+	factory = LHServerFactory()
+	reactor.listenTCP(port, factory)
+	log("LHServer started at port %i" % port)
+	reactor.run()
+	
+	
+	
+	

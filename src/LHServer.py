@@ -11,7 +11,8 @@ debug = True
 
 
 def stopServer():
-	log("Stopping LHServer")
+	if debug:
+		log("Stopping LHServer")
 	sys.stdout.flush()
 	reactor.stop()
 
@@ -23,7 +24,8 @@ def onlineUsers():
 
 def broadcastServerChat(*args):
 	chat = ' '.join(args)
-	log(chat)
+	if debug:
+		log(chat)
 	chatDict = {kChat:chat, kTimestamp:timestamp() + ' GMT', kChatType:kServerChat}
 
 	for client in factory.clients:
@@ -127,7 +129,9 @@ class LHServerProtocol(Protocol):
 		try:
 			jsonDict = json.loads(data)
 		except ValueError as e:
-			log(e)
+			if debug:
+				log(e)
+			self.broadcast('Illegal command', 'error')
 			return
 		command = jsonDict[kCommand]
 		if debug:
@@ -162,7 +166,8 @@ class LHServerProtocol(Protocol):
 					if clientDict == {}:
 						clientDict = loginPass
 						clientDict[kClientCount] = 1
-						broadcastServerChat("%s has joined" % self.username)
+						if debug:
+							broadcastServerChat("%s has joined" % self.username)
 					else:
 						clientDict[kClientCount] = clientDict[kClientCount] +1
 
@@ -215,9 +220,20 @@ def logoutUser(client, usr):
 				except:
 					pass
 				finally:
-					factory.broadcastUserList()
 					broadcastServerChat("%s has left" % usr)
 					client.broadcast(True, kLogoutResponse)
+					factory.broadcastUserList()
+
+def setup(username, password, database, port=25552):
+	global dbUsername, dbPassword, dbName, factory
+	dbUsername = username
+	dbPassword = password
+	dbName = database
+	factory = LHServerFactory()
+	reactor.listenTCP(port, factory)
+
+def startServer():
+	reactor.run()
 
 if __name__ == '__main__':
 	
@@ -262,11 +278,9 @@ if __name__ == '__main__':
 	
 	
 	stdio.StandardIO(Echo())
-	factory = LHServerFactory()
-	reactor.listenTCP(port, factory)
+	setup(port=port, username=dbUsername, password=dbPassword, database=dbName)
 	log("LHServer started at port %i" % port)
-	reactor.run()
-	
+	startServer()
 	
 	
 	

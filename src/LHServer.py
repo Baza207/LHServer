@@ -86,7 +86,9 @@ class LHServerFactory(Factory):
 	def __init__(self):
 		self.clients = []
 		self.users = {}
-		self.protocol = LHServerProtocol
+	
+	def buildProtocol(self, addr):
+		return LHServerProtocol(self)
 	
 	def broadcastChat(self, chatDict, command):
 		for client in self.clients:
@@ -102,8 +104,9 @@ class LHServerFactory(Factory):
 class LHServerProtocol(Protocol):
 	'''Client object'''
 	
-	def __init__(self):
+	def __init__(self, factory):
 		self.username = ''
+		self.factory = factory
 
 	def connectionMade(self):
 		'''Called when a connection is made.'''

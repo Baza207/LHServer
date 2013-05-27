@@ -53,7 +53,7 @@ At the moment users have to be created manually in the database. Passwords are s
 }
 ```
 
-For more details of the variables for each command, please refer to [`LHServerKeys.py`](https://github.com/Baza207/LHServer/blob/master/src/LHServerKeys.py) and [`tests.py`](https://github.com/Baza207/LHServer/blob/master/src/tests.py).
+For more details of the variables for each command, please refer to [`tests.py`](https://github.com/Baza207/LHServer/blob/master/src/tests.py).
 
 ## Client Applications
 

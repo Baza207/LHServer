@@ -28,7 +28,7 @@ def broadcastServerChat(*args):
 	if debug:
 		log(chat)
 
-	chatDict = {kChat:chat, 'timestamp':timestamp() + ' GMT', 'chatType':'serverChat'}
+	chatDict = {'chat':chat, 'timestamp':timestamp() + ' GMT', 'chatType':'serverChat'}
 
 	for client in factory.clients:
 		if client.username in factory.users:

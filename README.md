@@ -4,7 +4,7 @@ The goal with this project is to make a multiplayer server base that will allow 
 
 In the future the server will allow users to connect through different types of authentication, for example from a database (the current system), with Facebook, Twitter or GameCenter.
 
-NOTE: This is currently in pre-alpha and not all features are implimented.
+**NOTE**: This is currently in pre-alpha and not all features are implimented.
 
 ### Current Features
 - Basic authentication of clients with database,  
@@ -36,7 +36,24 @@ CREATE TABLE `users` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 ```
 
-At the moment users have to be created manually in the database. Passwords are stored as SHA1.
+At the moment users have to be created manually in the database. Passwords are stored as SHA1 by the client.
+
+## JSON Structure
+
+### Base structure
+#### Variables
+- `command` -  The command string to be processed. This is always a string.
+- `data` -		The data for the command. This can be any variable type but is normally a dictionary.
+
+
+```
+{
+  "command" : " ",
+  "data" : { }
+}
+```
+
+For more details of the variables for each command, please refer to [`LHServerKeys.py`](https://github.com/Baza207/LHServer/blob/master/src/LHServerKeys.py) and [`tests.py`](https://github.com/Baza207/LHServer/blob/master/src/tests.py).
 
 ## Client Applications
 

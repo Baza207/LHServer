@@ -1,18 +1,19 @@
 #!/usr/bin/env python
+
 import sys, json, ConfigParser
 import MySQLdb
 from datetime import datetime
 from twisted.internet import reactor, stdio
 from twisted.internet.protocol import Factory, Protocol
 from twisted.protocols import basic
-from LHServerKeys import *
 
 debug = True
-
+TIMESTAMP_FORMAT	= '%d/%m/%Y %H:%M:%S'
 
 def stopServer():
 	if debug:
 		log("Stopping LHServer")
+
 	sys.stdout.flush()
 	reactor.stop()
 
@@ -26,11 +27,12 @@ def broadcastServerChat(*args):
 	chat = ' '.join(args)
 	if debug:
 		log(chat)
-	chatDict = {kChat:chat, kTimestamp:timestamp() + ' GMT', kChatType:kServerChat}
+
+	chatDict = {kChat:chat, 'timestamp':timestamp() + ' GMT', 'chatType':'serverChat'}
 
 	for client in factory.clients:
 		if client.username in factory.users:
-			client.broadcast(chatDict, kChatBroadcast)
+			client.broadcast(chatDict, 'chatBroadcast')
 
 def helpLog():
 	'''Print help message'''
@@ -46,13 +48,13 @@ class Echo(basic.LineReceiver):
 	from os import linesep as delimiter
 
 	command_list = {
-		    'stop': stopServer,
-		    'clients': onlineClients,
-		    'online': onlineUsers,
-		    'help': helpLog,
-		    '?': helpLog,
-		    'broadcast': broadcastServerChat
-	    }
+			'stop': stopServer,
+			'clients': onlineClients,
+			'online': onlineUsers,
+			'help': helpLog,
+			'?': helpLog,
+			'broadcast': broadcastServerChat
+		}
 
 	def lineReceived(self, line):
 		args = line.split(' ')
@@ -65,7 +67,6 @@ class Echo(basic.LineReceiver):
 				log(e)
 		else:
 			log('Invalid command "%s"' % line)
-
 
 def log(message):
 	'''Basic logging to stdout'''
@@ -82,28 +83,26 @@ def timestamp():
 # Class for setting up custom Twisted Factory object
 class LHServerFactory(Factory):
 	'''Server object'''
-	
 	def __init__(self):
 		self.clients = []
 		self.users = {}
-	
+
 	def buildProtocol(self, addr):
 		return LHServerProtocol(self)
-	
+
 	def broadcastChat(self, chatDict, command):
 		for client in self.clients:
 			if client.username in self.users:
 				client.broadcast(chatDict, command)
-	
+
 	def broadcastUserList(self):
 		for client in self.clients:
 			if client.username in self.users:
-				client.broadcast(self.users, kUserList)
+				client.broadcast(self.users, 'userList')
 
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
 	'''Client object'''
-	
 	def __init__(self, factory):
 		self.username = ''
 		self.factory = factory
@@ -136,58 +135,59 @@ class LHServerProtocol(Protocol):
 				log(e)
 			self.broadcast('Illegal command', 'error')
 			return
-		command = jsonDict[kCommand]
+
+		command = jsonDict['command']
 		if debug:
 			log("Command: " + command)
 
 		if command:
-			data = jsonDict[kData]
+			data = jsonDict['data']
 
-			if command == kChatBroadcast:
-				self.factory.broadcastChat(data, kChatBroadcast)
-			elif command == kStartType:
-				self.factory.broadcastChat(data, kStartType)
-			elif command == kEndType:
-				self.broadcastChat(data, kEndType)
-			elif command == kLogin:
-				usr = str(data[kUsername]).lower()
-				pswd = str(data[kPassword])
+			if command == 'chatBroadcast':
+				self.factory.broadcastChat(data, 'chatBroadcast')
+			elif command == 'startType':
+				self.factory.broadcastChat(data, 'startType')
+			elif command == 'endType':
+				self.broadcastChat(data, 'endType')
+			elif command == 'login':
+				usr = str(data['username']).lower()
+				pswd = str(data['password'])
 				loginPass = loginUserFromDatabase(usr, pswd)
 
 				if loginPass:
 					self.username = usr
 
-					del loginPass[kPassword]
+					del loginPass['password']
 
 					try:
 						clientDict = self.factory.users[self.username]
 					except:
 						pass
 
-					self.broadcast(True, kLoginResponse)
+					self.broadcast(True, 'loginResponse')
 
 					if clientDict == {}:
 						clientDict = loginPass
-						clientDict[kClientCount] = 1
+						clientDict['clientCount'] = 1
 						if debug:
 							broadcastServerChat("%s has joined" % self.username)
 					else:
-						clientDict[kClientCount] = clientDict[kClientCount] +1
+						clientDict['clientCount'] = clientDict['clientCount'] +1
 
 				else:
-					self.broadcast(False, kLoginResponse)
-			elif command == kLogout:
+					self.broadcast(False, 'loginResponse')
+			elif command == 'logout':
 				logoutUser(self, str(data))
 
 		if clientDict:
 			self.factory.users[self.username] = clientDict
 
-		if command == kLogin and loginPass:
+		if command == 'login' and loginPass:
 			self.factory.broadcastUserList()
 
 	def broadcast(self, message, command):
 		'''Send message to client'''
-		tempDict = {kCommand:command, kData: message}
+		tempDict = {'command':command, 'data': message}
 		jsonString = json.dumps(tempDict)
 		if debug:
 			log("JSON string: %s" % jsonString)
@@ -216,15 +216,15 @@ def logoutUser(client, usr):
 		pass
 	finally:
 		if clientDict != {}:
-			clientDict[kClientCount] = clientDict[kClientCount] -1
-			if clientDict[kClientCount] <= 0:
+			clientDict['clientCount'] = clientDict['clientCount'] -1
+			if clientDict['clientCount'] <= 0:
 				try:
 					del factory.users[usr]
 				except:
 					pass
 				finally:
 					broadcastServerChat("%s has left" % usr)
-					client.broadcast(True, kLogoutResponse)
+					client.broadcast(True, 'logoutResponse')
 					factory.broadcastUserList()
 
 def setup(username, password, database, port=25552):
@@ -239,17 +239,16 @@ def startServer():
 	reactor.run()
 
 if __name__ == '__main__':
-	
 	defaults = {'port': '25552',
 				'dbUsername':'',
 				'dbPassword':'',
 				'dbName':''}
-	
+
 	# config.txt settings
 	config=ConfigParser.ConfigParser(defaults)
 	if config.read(['config.txt']):
 		defaults = dict(config.items("Properties"))
-		
+
 	# Command line settings
 	try:
 		# For python2.6 this will not work by default
@@ -278,12 +277,8 @@ if __name__ == '__main__':
 		dbUsername = defaults['dbusername']
 		dbPassword = defaults['dbpassword']
 		dbName = defaults['dbname']
-	
-	
+
 	stdio.StandardIO(Echo())
 	setup(port=port, username=dbUsername, password=dbPassword, database=dbName)
-	log("LHServer started at port %i" % port)
+	log("LHServer started on port %i" % port)
 	startServer()
-	
-	
-	

@@ -12,12 +12,43 @@ In the future the server will allow users to connect through different types of 
 - Broadcasting group chat messages to all autenticated clients,  
 - Broadcasting sever messages to clients.  
 
-###Roadmap
+### Roadmap
 Read the roadmap [here!](https://github.com/Baza207/LHServer/blob/master/ROADMAP.md)
+
+### Module Structure
+Below is an initial plan for modules in LHServer. These are just ideas and will be under constant change (including additions).
+
+<table>
+  <th colspan="11">LHSCore</th>
+  <tr align="center">
+    <td colspan="2">Authentication</td>
+    <td colspan="3">Chat</td>
+    <td colspan="5">Push Notifications</td>
+    <td colspan="1">Game Server</td>
+  </tr>
+  <tr align="center">
+    <td>Database</td>
+    <td>Social (Fb, Twitter, etc)</td>
+    
+    <td>Group</td>
+    <td>Private</td>
+    <td>Server</td>
+    
+    <td>Mac</td>
+    <td>Windows</td>
+    <td>Linux</td>
+    <td>iOS</td>
+    <td>Android</td>
+    
+    <td>TBD</td>
+  </tr>
+</table>
+
+A more detailed version will be coming soon to the Wiki.
 
 ## Prerequisites
 
-LHServer is written on Python 2.6 with the following extra libraries:
+LHServer is written in Python with the following extra libraries:
 
 - MySQLdb  
 - Twisted
@@ -43,7 +74,7 @@ At the moment users have to be created manually in the database. Passwords are s
 ### Base structure
 #### Variables
 - `command` -  The command string to be processed. This is always a string.
-- `data` -		The data for the command. This can be any variable type but is normally a dictionary.
+- `data` -		The data for the command. This will ether be a dictionary or a BOOL.
 
 
 ```
@@ -54,6 +85,8 @@ At the moment users have to be created manually in the database. Passwords are s
 ```
 
 For more details of the variables for each command, please refer to [`tests.py`](https://github.com/Baza207/LHServer/blob/master/src/tests.py).
+
+A more detailed version will be coming soon to the Wiki.
 
 ## Client Applications
 

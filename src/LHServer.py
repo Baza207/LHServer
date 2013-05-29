@@ -98,7 +98,7 @@ class LHServerFactory(Factory):
 	def broadcastUserList(self):
 		for client in self.clients:
 			if client.username in self.users:
-				client.broadcast(self.users, 'userList')
+				client.broadcast({'users':self.users}, 'userList')
 
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
@@ -133,7 +133,7 @@ class LHServerProtocol(Protocol):
 		except ValueError as e:
 			if debug:
 				log(e)
-			self.broadcast('Illegal command', 'error')
+			self.broadcast({'error_description':'Illegal command'}, 'error')
 			return
 
 		command = jsonDict['command']
@@ -164,7 +164,7 @@ class LHServerProtocol(Protocol):
 					except:
 						pass
 
-					self.broadcast(True, 'loginResponse')
+					self.broadcast({'response_success':True}, 'loginResponse')
 
 					if clientDict == {}:
 						clientDict = loginPass
@@ -175,7 +175,7 @@ class LHServerProtocol(Protocol):
 						clientDict['clientCount'] = clientDict['clientCount'] +1
 
 				else:
-					self.broadcast(False, 'loginResponse')
+					self.broadcast({'response_success':False}, 'loginResponse')
 			elif command == 'logout':
 				logoutUser(self, str(data))
 
@@ -224,7 +224,7 @@ def logoutUser(client, usr):
 					pass
 				finally:
 					broadcastServerChat("%s has left" % usr)
-					client.broadcast(True, 'logoutResponse')
+					client.broadcast({'response_success':True}, 'logoutResponse')
 					factory.broadcastUserList()
 
 def setup(username, password, database, port=25552):

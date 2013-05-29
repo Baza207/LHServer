@@ -72,9 +72,9 @@ At the moment users have to be created manually in the database. Passwords are s
 ## JSON Structure
 
 ### Base structure
-#### Variables
-- `command` -  The command string to be processed. This is always a string.
-- `data` -		The data for the command. This will ether be a dictionary or a BOOL.
+#### Keys
+- `command` - The command string to be processed of type `<string>`.
+- `data` - The data for the command of type `<dictionary>`.
 
 
 ```
@@ -84,9 +84,7 @@ At the moment users have to be created manually in the database. Passwords are s
 }
 ```
 
-For more details of the variables for each command, please refer to [`tests.py`](https://github.com/Baza207/LHServer/blob/master/src/tests.py).
-
-A more detailed version will be coming soon to the Wiki.
+For more details please refer to the Wiki [here!](https://github.com/Baza207/LHServer/wiki/JSON-Structures)
 
 ## Client Applications
 

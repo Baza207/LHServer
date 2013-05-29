@@ -32,7 +32,7 @@ def broadcastServerChat(*args):
 
 	for client in factory.clients:
 		if client.username in factory.users:
-			client.broadcast(chatDict, 'chatBroadcast')
+			client.broadcast(chatDict, 'chatBroadcast', 1)
 
 def helpLog():
 	'''Print help message'''
@@ -93,12 +93,12 @@ class LHServerFactory(Factory):
 	def broadcastChat(self, chatDict, command):
 		for client in self.clients:
 			if client.username in self.users:
-				client.broadcast(chatDict, command)
+				client.broadcast(chatDict, command, 0)
 
 	def broadcastUserList(self):
 		for client in self.clients:
 			if client.username in self.users:
-				client.broadcast({'users':self.users}, 'userList')
+				client.broadcast({'users':self.users}, 'userList', 0)
 
 # Class for setting up custom Twisted Protocol object
 class LHServerProtocol(Protocol):
@@ -133,7 +133,7 @@ class LHServerProtocol(Protocol):
 		except ValueError as e:
 			if debug:
 				log(e)
-			self.broadcast({'error_description':'Illegal command'}, 'error')
+			self.broadcast({'error_description':'Illegal command'}, 'error', -1)
 			return
 
 		command = jsonDict['command']
@@ -164,7 +164,7 @@ class LHServerProtocol(Protocol):
 					except:
 						pass
 
-					self.broadcast({'response_success':True}, 'loginResponse')
+					self.broadcast({'response_success':True}, 'loginResponse', 1)
 
 					if clientDict == {}:
 						clientDict = loginPass
@@ -175,7 +175,7 @@ class LHServerProtocol(Protocol):
 						clientDict['clientCount'] = clientDict['clientCount'] +1
 
 				else:
-					self.broadcast({'response_success':False}, 'loginResponse')
+					self.broadcast({'response_success':False}, 'loginResponse', -1)
 			elif command == 'logout':
 				logoutUser(self, str(data))
 
@@ -185,7 +185,7 @@ class LHServerProtocol(Protocol):
 		if command == 'login' and loginPass:
 			self.factory.broadcastUserList()
 
-	def broadcast(self, message, command):
+	def broadcast(self, message, command, status):
 		'''Send message to client'''
 		tempDict = {'command':command, 'data': message}
 		jsonString = json.dumps(tempDict)
@@ -224,7 +224,7 @@ def logoutUser(client, usr):
 					pass
 				finally:
 					broadcastServerChat("%s has left" % usr)
-					client.broadcast({'response_success':True}, 'logoutResponse')
+					client.broadcast({'response_success':True}, 'logoutResponse', 1)
 					factory.broadcastUserList()
 
 def setup(username, password, database, port=25552):

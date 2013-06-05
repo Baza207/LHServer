@@ -1,4 +1,4 @@
-## Little Hedgehog Server
+## Little Hedgehog Server <img src="http://blog.pigonahill.com/wp-content/uploads/2013/05/icon_512x512@2x.png" width="60px">
 
 The goal with this project is to make a multiplayer server base that will allow connections from a variety of different devices and authentications and to allow parts to be made, added and/or removed in a modular fashion. This is currently starting with making a basic chat server and expanding on that.
 

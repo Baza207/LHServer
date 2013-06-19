@@ -44,6 +44,10 @@ def openFeedbackConnection():
 
 	openSocket(apns_address, cert)
 
+def closeConnection(sock, shutdownArg):
+	sock.shutdown(shutdownArg)
+	sock.close()
+
 # Makes an alert dictionary/string to insert into the notification JSON in makeNotification:
 def makeAlert(body, actionLocKey, locKey, locArgs, launchImage):
 	alertDict = {}
@@ -89,30 +93,22 @@ def makeNotification(token, alert, badge, sound, userInfo):
 	return notif
 
 # Sends a alert in a Push Notification
-def sendNotifications(tokensArray, alert, sound):
+def sendNotifications(tokens, alert, sound):
 	sock = openAPNsConnection()
 
-	for token in tokensArray:
+	for token in tokens:
 		if len(token) > 0:
+			badge = 1 # TODO: Increment badge number for token in database
 			notif = makeNotification(token, alert, badge, sound)
-			# TODO: Increment badge number for token in database
 			sock.write(notif)
 			# TODO: Work out if the notification was sent correctly, if not, stop and start again from the message that was not sent
 
-	sock.shutdown(SHUT_RDWR)
-	sock.close()
+	closeConnection(sock, SHUT_RDWR)
 
 # Get feedback response from server
-def sendFeedbackRequest():
+def checkFeedbackService():
 	sock = openFeedbackConnection()
 
 	# TODO: Get response from the Feedback server socket to get tokens no longer valid
 
-	sock.shutdown(SHUT_RDWR)
-	sock.close()
-
-# def main():
-# 	print makeAlert("Hello", None, None, None, None)
-
-# if __name__ == '__main__':
-# 	main()
+	closeConnection(sock, SHUT_RDWR)

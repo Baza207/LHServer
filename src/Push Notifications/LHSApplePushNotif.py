@@ -1,22 +1,25 @@
 #!/usr/bin/env python
 
-import ssl, json, socket, struct, binascii
+import ssl, json, socket, struct, binascii, time
 
 debug = True
 # Sets the APNs to sandbox or live
 sandbox = True
 # Certification names and/or locations
 liveCert = ''
-devCert = ''
+devCert = 'LHS_anps_dev.pem'
 
 def openSocket(address, cert):
-	s = socket.socket()
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 	sock = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv3, certfile=cert)
 
 	try:
 		sock.connect(address)
 	except:
-		exit("Failed to connect to address: %s" % address)
+		exit("Failed to connect to socket!")
+
+	# sock.setblocking(0)
+	# sock.settimeout(0.5)
 
 	return sock
 
@@ -25,28 +28,30 @@ def openAPNsConnection():
 	cert = ''
 	if sandbox:
 		cert = devCert
-		apns_address = ('gateway.sandbox.push.apple.com', 2195)
+		address = ('gateway.sandbox.push.apple.com', 2195)
 	else:
 		cert = liveCert
-		apns_address = ('gateway.push.apple.com', 2195)
+		address = ('gateway.push.apple.com', 2195)
 
-	openSocket(apns_address, cert)
+	return openSocket(address, cert)
 
 # Open a socket connection to the Feedback server
 def openFeedbackConnection():
 	cert = ''
 	if sandbox:
 		cert = devCert
-		apns_address = ('feedback.sandbox.push.apple.com', 2196)
+		address = ('feedback.sandbox.push.apple.com', 2196)
 	else:
 		cert = liveCert
-		apns_address = ('feedback.push.apple.com', 2196)
+		address = ('feedback.push.apple.com', 2196)
 
-	openSocket(apns_address, cert)
+	return openSocket(address, cert)
 
-def closeConnection(sock, shutdownArg):
-	sock.shutdown(shutdownArg)
+def closeConnection(sock):
+	sock.shutdown(socket.SHUT_WR)
 	sock.close()
+	if debug:
+		print "Connection Closed"
 
 # Makes an alert dictionary/string to insert into the notification JSON in makeNotification:
 def makeAlert(body, actionLocKey, locKey, locArgs, launchImage):
@@ -54,8 +59,6 @@ def makeAlert(body, actionLocKey, locKey, locArgs, launchImage):
 
 	if actionLocKey is not None and len(actionLocKey) > 0:
 		alertDict['action-loc-key'] = actionLocKey
-	else:
-		alertDict['action-loc-key'] = None
 
 	if locKey is not None and len(locKey) > 0:
 		alertDict['loc-key'] = locKey
@@ -69,6 +72,9 @@ def makeAlert(body, actionLocKey, locKey, locArgs, launchImage):
 	if len(alertDict) <= 0:
 		return body
 
+	if actionLocKey is None or len(actionLocKey) <= 0:
+		alertDict['action-loc-key'] = None
+
 	return alertDict
 
 # Makes a notification to be sent
@@ -76,19 +82,24 @@ def makeNotification(token, alert, badge, sound, userInfo):
 	if badge is None:
 		badge = 0
 
-	if soundName is None or len(soundName) <= 0:
-		soundName = 'default'
+	if sound is None or len(soundName) <= 0:
+		sound = 'default'
 
 	payloadDict = {'aps': {'alert': alert, 'badge': badge, 'sound': sound}}
-	if len(userInfo) > 0:
+	if userInfo is not None and len(userInfo) > 0:
 		payloadDict = dict(payloadDict.items() + userInfo.items())
 
-	payloadJSON = json.dumps(payloadString)
-
+	payloadJSON = json.dumps(payloadDict)
 	binaryToken = binascii.unhexlify(token)
-	fmt = "!cH32sH{0:d}s".format(len(payloadJSON))
-	cmd = '\x00'
-	notif = struct.pack(fmt, cmd, len(binaryToken), binaryToken, len(payloadJSON), payloadJSON)
+	timestamp = int(time.time())
+	expiry = timestamp + 86400
+
+	if debug:
+		print ("ID for notification is: %s" % timestamp)
+
+	fmt = '!BIIH32sH%ds' %(len(payloadJSON))
+	cmd = 1
+	notif = struct.pack(fmt, cmd, timestamp, expiry, len(binaryToken), binaryToken, len(payloadJSON), payloadJSON)
 
 	return notif
 
@@ -99,16 +110,41 @@ def sendNotifications(tokens, alert, sound):
 	for token in tokens:
 		if len(token) > 0:
 			badge = 1 # TODO: Increment badge number for token in database
-			notif = makeNotification(token, alert, badge, sound)
-			sock.write(notif)
-			# TODO: Work out if the notification was sent correctly, if not, stop and start again from the message that was not sent
+			notif = makeNotification(token, alert, badge, sound, None)
 
-	closeConnection(sock, SHUT_RDWR)
+			nBytesWritten = sock.send(notif)
+			if debug:
+				print "nBytesWritten: %d" %(nBytesWritten)
+
+	# TODO: Work out if the notification was sent correctly, if not, stop and start again from the message that was not sent
+
+	# data = ''
+	# try:
+	# 	data = sock.recv(6)
+	# except Exception, e:
+	# 	print e
+
+	# if len(data) > 0:
+	# 	if debug:
+	# 		print "Data recived: %s" %(data)
+	# 	fmt = '!BBI'
+	# 	print struct.unpack(fmt, data)
+
+	closeConnection(sock)
 
 # Get feedback response from server
 def checkFeedbackService():
 	sock = openFeedbackConnection()
 
 	# TODO: Get response from the Feedback server socket to get tokens no longer valid
+	data = sock.recv(1024)
+	print "Data recived: %s" %(data)
 
-	closeConnection(sock, SHUT_RDWR)
+	if len(data) > 0:
+		fmt = '!IH32s'
+		feedbackTuples = struct.unpack(fmt, data)
+
+		if debug:
+			print feedbackTuples
+
+	closeConnection(sock)

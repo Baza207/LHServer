@@ -1,4 +1,5 @@
 config.txt
 *.pyc
+*.p12
 *.cer
 *.pem

@@ -1,3 +1,10 @@
+#
+#	LHServer.py
+#	Little Hedgehog Server
+#
+#	Created by James Barrow on 29/05/2013.
+#
+
 #!/usr/bin/env python
 
 import sys, json, ConfigParser

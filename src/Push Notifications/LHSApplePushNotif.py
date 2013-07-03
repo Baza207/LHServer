@@ -1,6 +1,13 @@
+#
+#	LHSApplePushNotif.py
+#	Little Hedgehog Server
+#
+#	Created by James Barrow on 18/06/2013.
+#
+
 #!/usr/bin/env python
 
-import ssl, json, socket, struct, binascii, time
+import ssl, json, socket, struct, binascii, time, thread
 
 debug = True
 # Sets the APNs to sandbox or live
@@ -9,17 +16,38 @@ sandbox = True
 liveCert = ''
 devCert = 'LHS_anps_dev.pem'
 
+def recv_data(sock, bufferSize):
+	# Receive data from other clients connected to server
+	while 1:
+		try:
+			recv_data = sock.recv(bufferSize)
+		except:
+			print "APNs closed connection, thread exiting."
+			thread.interrupt_main()	#Handle the case when server process terminates
+			break
+
+		if not recv_data:
+			print "APNs closed connection, thread exiting. No data."
+			thread.interrupt_main()	# Recv with no data, server closed connection
+			break
+		else:
+			print "Received data: " + str(recv_data)
+			fmt = '!BBI'
+			print struct.unpack(fmt, recv_data)
+			thread.interrupt_main()
+			break
+
 def openSocket(address, cert):
 	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-	sock = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv3, certfile=cert)
+	sock = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv3, server_side=False, certfile=cert)
+	sock.settimeout(3)
 
 	try:
 		sock.connect(address)
 	except:
 		exit("Failed to connect to socket!")
 
-	# sock.setblocking(0)
-	# sock.settimeout(0.5)
+	print "Opened socket to: %s" %(str(address))
 
 	return sock
 
@@ -107,6 +135,8 @@ def makeNotification(token, alert, badge, sound, userInfo):
 def sendNotifications(tokens, alert, sound):
 	sock = openAPNsConnection()
 
+	thread.start_new_thread(recv_data, (sock, 6,))
+
 	for token in tokens:
 		if len(token) > 0:
 			badge = 1 # TODO: Increment badge number for token in database
@@ -116,21 +146,12 @@ def sendNotifications(tokens, alert, sound):
 			if debug:
 				print "nBytesWritten: %d" %(nBytesWritten)
 
-	# TODO: Work out if the notification was sent correctly, if not, stop and start again from the message that was not sent
+	try:
+		while 1:
+			continue
+	except:
+		closeConnection(sock)
 
-	# data = ''
-	# try:
-	# 	data = sock.recv(6)
-	# except Exception, e:
-	# 	print e
-
-	# if len(data) > 0:
-	# 	if debug:
-	# 		print "Data recived: %s" %(data)
-	# 	fmt = '!BBI'
-	# 	print struct.unpack(fmt, data)
-
-	closeConnection(sock)
 
 # Get feedback response from server
 def checkFeedbackService():

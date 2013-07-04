@@ -28,7 +28,6 @@ class LHSAPNclient(object):
 		self.notifBinaryDict = {}
 		self.failedCounts = {}
 
-
 	def recv_data(self, bufferSize, callback):
 		# Receive data from other clients connected to server
 		while 1:
@@ -47,8 +46,6 @@ class LHSAPNclient(object):
 				break
 			else:
 				callback(data)
-				thread.interrupt_main()
-				break
 
 	def openSocket(self, address, cert):
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -191,7 +188,7 @@ class LHSAPNclient(object):
 						if failedCount <= MAX_RETRY:
 							self.failedCounts[self.failedTurple[2]] = failedCount+1
 							if debug:
-								print "Retry notification with ID: %d failed with status: %d" % (self.failedTurple[2], self.failedTurple[1])
+								print "Retry notification with ID: %d failed with status: %d" %(self.failedTurple[2], self.failedTurple[1])
 						else:
 							if self.failedTurple[2] in queueIDsList:
 								queueIDsList.remove(self.failedTurple[2])
@@ -201,7 +198,7 @@ class LHSAPNclient(object):
 
 				else:
 					if debug:
-						print "Notification with ID: %d failed with status: %d" % (self.failedTurple[2], self.failedTurple[1])
+						print "Notification with ID: %d failed with status: %d" %(self.failedTurple[2], self.failedTurple[1])
 
 					if self.failedTurple[2] in queueIDsList:
 						queueIDsList.remove(self.failedTurple[2])
@@ -230,15 +227,43 @@ class LHSAPNclient(object):
 	# Get feedback response from server
 	def checkFeedbackService(self):
 		self.openFeedbackConnection()
-		thread.start_new_thread(self.recv_data, (1024, self.recivedFeedbackError,))
-		closeConnection()
+		thread.start_new_thread(self.recv_data, (4096, self.recivedFeedback,))
 
-	def recivedFeedbackError(self, errorBinary):
-		fmt = '!IH32s'
-		feedbackTuples = struct.unpack(fmt, data)
+		try:
+			while 1:
+				continue
+		except:
+			self.closeConnection()
+
+	def recivedFeedback(self, feedbackBinary):
+		numOfChunks= len(feedbackBinary)/38
+		if len(feedbackBinary) % 38:
+			numOfChunks += 1
 
 		if debug:
-			print feedbackTuples
+			print "Number of chunks: %d" %numOfChunks
+		feedbackTupleList = []
+
+		if len(feedbackBinary) > 38:
+			for i in xrange(numOfChunks):
+				startPoint = i*38
+				endPoint = startPoint + 38
+				chunk = feedbackBinary[startPoint: endPoint]
+				feedbackTuple = self.unpackFeedbackTurple(chunk)
+				# feedbackTuple[2] = binascii.hexlify(feedbackTuple[2])
+				feedbackTupleList.append(feedbackTuple)
+		else:
+			feedbackTuple = self.unpackFeedbackTurple(feedbackBinary)
+			# feedbackTuple[2] = binascii.hexlify(feedbackTuple[2])
+			feedbackTupleList.append(feedbackTuple)
+
+		if debug:
+			print feedbackTupleList
+
+	def unpackFeedbackTurple(self, data):
+		fmt = '!IH32s'
+		feedbackTuple = struct.unpack(fmt, data)
+		return feedbackTuple
 
 # Makes an alert dictionary/string to insert into the notification JSON in makeNotification:
 def makeAlert(body, actionLocKey, locKey, locArgs, launchImage):

@@ -1,5 +1,10 @@
 ##Little Hedgehog Server Roadmap
 
+### LHServer 0.1
+- Module system,
+- Puch notifications (iOS for starters but expandable),
+- Versioning system.
+
 ### LHServer 0.1.1
 - Broadcast to authenticated users if anouther user is typing,
 - Broadcast a message from the server to all users using the console,

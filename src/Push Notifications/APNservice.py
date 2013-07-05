@@ -22,17 +22,17 @@ RETRY_STATUS_CODES = [1, 10]
 class APNservice(object):
 	def __init__(self):
 		super(APNservice, self).__init__()
-		self.sock = None
-		self.currentID = 0
-		self.failedTurple = None
-		self.notifBinaryDict = {}
-		self.failedCounts = {}
+		self.__sock = None
+		self.__currentID = 0
+		self.__failedTurple = None
+		self.__notifBinaryDict = {}
+		self.__failedCounts = {}
 
-	def recv_data(self, bufferSize, callback):
+	def __recv_data(self, bufferSize, callback):
 		# Receive data from other clients connected to server
 		while 1:
 			try:
-				data = self.sock.recv(bufferSize)
+				data = self.__sock.recv(bufferSize)
 			except:
 				if debug:
 					print "APNs closed connection, thread exiting."
@@ -47,13 +47,13 @@ class APNservice(object):
 			else:
 				callback(data)
 
-	def openSocket(self, address, cert):
+	def __openSocket(self, address, cert):
 		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		self.sock = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv3, server_side=False, certfile=cert)
-		self.sock.settimeout(3)
+		self.__sock = ssl.wrap_socket(s, ssl_version=ssl.PROTOCOL_SSLv3, server_side=False, certfile=cert)
+		self.__sock.settimeout(3)
 
 		try:
-			self.sock.connect(address)
+			self.__sock.connect(address)
 		except:
 			exit("Failed to connect to socket!")
 
@@ -61,7 +61,7 @@ class APNservice(object):
 			print "Opened socket to: %s" %(str(address))
 
 	# Opens a socket connection to the APNs
-	def openAPNsConnection(self):
+	def __openAPNsConnection(self):
 		cert = ''
 		if sandbox:
 			cert = devCert
@@ -70,10 +70,10 @@ class APNservice(object):
 			cert = liveCert
 			address = ('gateway.push.apple.com', 2195)
 
-		self.openSocket(address, cert)
+		self.__openSocket(address, cert)
 
 	# Open a socket connection to the Feedback server
-	def openFeedbackConnection(self):
+	def __openFeedbackConnection(self):
 		cert = ''
 		if sandbox:
 			cert = devCert
@@ -82,31 +82,30 @@ class APNservice(object):
 			cert = liveCert
 			address = ('feedback.push.apple.com', 2196)
 
-		self.openSocket(address, cert)
+		self.__openSocket(address, cert)
 
-	def closeConnection(self):
-		# self.sock.shutdown(socket.SHUT_WR)
-		self.sock.close()
-		self.sock = None
+	def __closeConnection(self):
+		self.__sock.close()
+		self.__sock = None
 		if debug:
 			print "Connection Closed"
 
-	def resetNotifs(self):
-		self.currentID = 0
-		self.failedTurple = None
+	def __resetNotifs(self):
+		self.__currentID = 0
+		self.__failedTurple = None
 
-	def clearFailedTurple(self):
-		print self.failedCounts
-		if self.failedTurple[2] in self.notifBinaryDict.keys():
-			del self.notifBinaryDict[self.failedTurple[2]]
+	def __clearFailedTurple(self):
+		print self.__failedCounts
+		if self.__failedTurple[2] in self.__notifBinaryDict.keys():
+			del self.__notifBinaryDict[self.__failedTurple[2]]
 
-		if self.failedTurple[2] in self.failedCounts.keys():
-			del self.failedCounts[self.failedTurple[2]]
+		if self.__failedTurple[2] in self.__failedCounts.keys():
+			del self.__failedCounts[self.__failedTurple[2]]
 
-		self.failedTurple = None
+		self.__failedTurple = None
 
 	# Makes a notification to be sent
-	def makeNotification(self, id, token, alert, badge, sound, userInfo):
+	def __makeNotification(self, id, token, alert, badge, sound, userInfo):
 		if badge is None:
 			badge = 0
 
@@ -128,29 +127,16 @@ class APNservice(object):
 
 		return notif
 
-	# Sends a alert in a Push Notification
-	def queueNotifications(self, tokens, alert, sound):
-		self.resetNotifs()
-
-		for token in tokens:
-			if len(token) > 0:
-				badge = 1 # TODO: Increment badge number for token in database
-				notif = self.makeNotification(self.currentID, token, alert, badge, sound, None)
-				self.notifBinaryDict[self.currentID] = notif
-				self.currentID += 1
-
-		self.sendNotifications()
-
-	def sendNotifications(self):
-		queueIDsList = self.notifBinaryDict.keys()
+	def __sendNotifications(self):
+		queueIDsList = self.__notifBinaryDict.keys()
 		sentIDsList = []
 
-		self.openAPNsConnection()
-		thread.start_new_thread(self.recv_data, (6, self.recivedAPNsError,))
+		self.__openAPNsConnection()
+		thread.start_new_thread(self.__recv_data, (6, self.__recivedAPNsError,))
 
 		for notifID in queueIDsList:
-			notif = self.notifBinaryDict[notifID]
-			numBytesWritten = self.sock.send(notif)
+			notif = self.__notifBinaryDict[notifID]
+			numBytesWritten = self.__sock.send(notif)
 			if debug:
 				print "Number of bytes written: %d" %(numBytesWritten)
 
@@ -160,12 +146,12 @@ class APNservice(object):
 			while 1:
 				continue
 		except KeyboardInterrupt:
-			if self.failedTurple is None:
-				self.resetNotifs()
-				self.closeConnection()
+			if self.__failedTurple is None:
+				self.__resetNotifs()
+				self.__closeConnection()
 			else:
 				for notifID in sentIDsList:
-					if notifID is not self.failedTurple[2]:
+					if notifID is not self.__failedTurple[2]:
 						queueIDsList.remove(notifID)
 					else:
 						break
@@ -176,66 +162,55 @@ class APNservice(object):
 					print "  Sent IDs: " + repr(sentIDsList)
 
 				for notifIDs in sentIDsList:
-					del self.notifBinaryDict[notifIDs]
+					del self.__notifBinaryDict[notifIDs]
 
 				sentIDsList = []
 
 				# Remove errored notif if not 1 or 10
-				if self.failedTurple[1] in RETRY_STATUS_CODES:
-					print "Failed ID: %d" % self.failedTurple[2]
-					if self.failedTurple[2] in self.failedCounts.keys():
-						failedCount = self.failedCounts[self.failedTurple[2]]
+				if self.__failedTurple[1] in RETRY_STATUS_CODES:
+					print "Failed ID: %d" % self.__failedTurple[2]
+					if self.__failedTurple[2] in self.__failedCounts.keys():
+						failedCount = self.__failedCounts[self.__failedTurple[2]]
 						if failedCount <= MAX_RETRY:
-							self.failedCounts[self.failedTurple[2]] = failedCount+1
+							self.__failedCounts[self.__failedTurple[2]] = failedCount+1
 							if debug:
-								print "Retry notification with ID: %d failed with status: %d" %(self.failedTurple[2], self.failedTurple[1])
+								print "Retry notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1])
 						else:
-							if self.failedTurple[2] in queueIDsList:
-								queueIDsList.remove(self.failedTurple[2])
-							self.clearFailedTurple()
+							if self.__failedTurple[2] in queueIDsList:
+								queueIDsList.remove(self.__failedTurple[2])
+							self.__clearFailedTurple()
 					else:
-						self.failedCounts[self.failedTurple[2]] = 1
+						self.__failedCounts[self.__failedTurple[2]] = 1
 
 				else:
 					if debug:
-						print "Notification with ID: %d failed with status: %d" %(self.failedTurple[2], self.failedTurple[1])
+						print "Notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1])
 
-					if self.failedTurple[2] in queueIDsList:
-						queueIDsList.remove(self.failedTurple[2])
-					self.clearFailedTurple()
+					if self.__failedTurple[2] in queueIDsList:
+						queueIDsList.remove(self.__failedTurple[2])
+					self.__clearFailedTurple()
 
 				if debug:
-					print "Notif Dict Keys: " + repr(self.notifBinaryDict.keys())
+					print "Notif Dict Keys: " + repr(self.__notifBinaryDict.keys())
 
-				self.closeConnection()
+				self.__closeConnection()
 
 				if len(queueIDsList) > 0:
-					self.sendNotifications()
+					self.__sendNotifications()
 		except:
-			self.resetNotifs()
-			self.closeConnection()
+			self.__resetNotifs()
+			self.__closeConnection()
 
-	def recivedAPNsError(self, errorBinary):
+	def __recivedAPNsError(self, errorBinary):
 		fmt = '!BBI'
 		errorTurple = struct.unpack(fmt, errorBinary)
 
 		if debug:
 			print errorTurple
 
-		self.failedTurple = errorTurple
+		self.__failedTurple = errorTurple
 
-	# Get feedback response from server
-	def checkFeedbackService(self):
-		self.openFeedbackConnection()
-		thread.start_new_thread(self.recv_data, (4096, self.recivedFeedback,))
-
-		try:
-			while 1:
-				continue
-		except:
-			self.closeConnection()
-
-	def recivedFeedback(self, feedbackBinary):
+	def __recivedFeedback(self, feedbackBinary):
 		numOfChunks= len(feedbackBinary)/38
 		if len(feedbackBinary) % 38:
 			numOfChunks += 1
@@ -249,21 +224,45 @@ class APNservice(object):
 				startPoint = i*38
 				endPoint = startPoint + 38
 				chunk = feedbackBinary[startPoint: endPoint]
-				feedbackTuple = self.unpackFeedbackTurple(chunk)
+				feedbackTuple = self.__unpackFeedbackTurple(chunk)
 				# feedbackTuple[2] = binascii.hexlify(feedbackTuple[2])
 				feedbackTupleList.append(feedbackTuple)
 		else:
-			feedbackTuple = self.unpackFeedbackTurple(feedbackBinary)
+			feedbackTuple = self.__unpackFeedbackTurple(feedbackBinary)
 			# feedbackTuple[2] = binascii.hexlify(feedbackTuple[2])
 			feedbackTupleList.append(feedbackTuple)
 
 		if debug:
 			print feedbackTupleList
 
-	def unpackFeedbackTurple(self, data):
+	def __unpackFeedbackTurple(self, data):
 		fmt = '!IH32s'
 		feedbackTuple = struct.unpack(fmt, data)
 		return feedbackTuple
+
+	# Sends a alert in a Push Notification
+	def queueNotifications(self, tokens, alert, sound):
+		self.__resetNotifs()
+
+		for token in tokens:
+			if len(token) > 0:
+				badge = 1 # TODO: Increment badge number for token in database
+				notif = self.__makeNotification(self.__currentID, token, alert, badge, sound, None)
+				self.__notifBinaryDict[self.__currentID] = notif
+				self.__currentID += 1
+
+		self.__sendNotifications()
+
+	# Get feedback response from server
+	def checkFeedbackService(self):
+		self.__openFeedbackConnection()
+		thread.start_new_thread(self.__recv_data, (4096, self.__recivedFeedback,))
+
+		try:
+			while 1:
+				continue
+		except:
+			self.__closeConnection()
 
 # Makes an alert dictionary/string to insert into the notification JSON in makeNotification:
 def makeAlert(body, actionLocKey, locKey, locArgs, launchImage):
@@ -278,11 +277,11 @@ def makeAlert(body, actionLocKey, locKey, locArgs, launchImage):
 	if locArgs is not None and len(locArgs) > 0:
 		alertDict['loc-args'] = locArgs
 
-	if launchImage is not None and len(launchImage) > 0:
-		alertDict['launch-image'] = launchImage
-
 	if len(alertDict.keys()) <= 0:
 		return body
+
+	if launchImage is not None and len(launchImage) > 0:
+		alertDict['launch-image'] = launchImage
 
 	if 'loc-key' not in alertDict.keys() and body is not None and len(body) > 0:
 		alertDict['body'] = body

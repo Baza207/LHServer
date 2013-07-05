@@ -18,11 +18,13 @@ Read the roadmap [here!](https://github.com/Baza207/LHServer/blob/master/ROADMAP
 ### Module Structure
 Below is an initial plan for modules in LHServer. These are just ideas and will be under constant change (including additions).
 
+For more details on each module, please refer to the [Wiki](https://github.com/Baza207/LHServer/wiki)
+
 <table>
-  <th colspan="11">LHSCore</th>
+  <th colspan="10">LHSCore</th>
   <tr align="center">
     <td colspan="2">Authentication</td>
-    <td colspan="3">Chat</td>
+    <td colspan="2">Chat</td>
     <td colspan="5">Push Notifications</td>
     <td colspan="1">Game Server</td>
   </tr>
@@ -32,7 +34,6 @@ Below is an initial plan for modules in LHServer. These are just ideas and will 
     
     <td>Group</td>
     <td>Private</td>
-    <td>Server</td>
     
     <td>Mac</td>
     <td>Windows</td>
@@ -75,16 +76,18 @@ At the moment users have to be created manually in the database. Passwords are s
 #### Keys
 - `command` - The command string to be processed of type `<string>`.
 - `data` - The data for the command of type `<dictionary>`.
+- `status_code` - Status for the success or failure of the call. `-1` is failure, `1` is success and `0` means not needed.
 
 
 ```
 {
   "command" : " ",
-  "data" : { }
+  "data" : { },
+  "status_code" : 0
 }
 ```
 
-For more details please refer to the Wiki [here!](https://github.com/Baza207/LHServer/wiki/JSON-Structures)
+For more details please refer to the Wiki for [JSON Structure](https://github.com/Baza207/LHServer/wiki/JSON-Structures).
 
 ## Client Applications
 

@@ -1,4 +1,5 @@
 config.txt
+config.php
 PushTest.py
 *.pyc
 *.p12

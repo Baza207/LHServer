@@ -47,7 +47,6 @@ def incrementBadge(token):
 	else:
 		badge += 1
 
-	updatedAt = '0000-00-00 00:00:00'
 	updateDevice(db, token, badge, device['OSVersion'], device['isDev'], device['userInfo'])
 	db.close()
 

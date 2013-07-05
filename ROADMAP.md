@@ -2,7 +2,7 @@
 
 ### LHServer 0.1
 - Module system,
-- Puch notifications (iOS for starters but expandable),
+- Push notifications (iOS for starters but expandable),
 - Versioning system.
 
 ### LHServer 0.1.1

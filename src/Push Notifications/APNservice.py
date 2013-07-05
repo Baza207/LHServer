@@ -19,9 +19,9 @@ devCert = 'LHS_anps_dev.pem'
 MAX_RETRY = 1
 RETRY_STATUS_CODES = [1, 10]
 
-class LHSAPNclient(object):
+class APNservice(object):
 	def __init__(self):
-		super(LHSAPNclient, self).__init__()
+		super(APNservice, self).__init__()
 		self.sock = None
 		self.currentID = 0
 		self.failedTurple = None

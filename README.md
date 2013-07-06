@@ -25,7 +25,7 @@ For more details on each module, please refer to the [Wiki](https://github.com/B
   <tr align="center">
     <td colspan="2">Authentication</td>
     <td colspan="2">Chat</td>
-    <td colspan="5">Push Notifications</td>
+    <td colspan="5">[Push Notifications](https://github.com/Baza207/LHServer/wiki/Apple-Push-Notifications)</td>
     <td colspan="1">Game Server</td>
   </tr>
   <tr align="center">
@@ -37,9 +37,9 @@ For more details on each module, please refer to the [Wiki](https://github.com/B
     
     <td>Mac</td>
     <td>Windows</td>
-    <td>Linux</td>
     <td>iOS</td>
     <td>Android</td>
+    <td>Etc</td>
     
     <td>TBD</td>
   </tr>

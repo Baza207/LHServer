@@ -2,6 +2,7 @@ config.txt
 config.php
 PushTest.py
 *.pyc
+*.log
 *.p12
 *.cer
 *.pem

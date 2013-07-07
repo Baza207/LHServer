@@ -7,14 +7,17 @@
 
 #!/usr/bin/env python
 
-import ssl, json, socket, struct, binascii, time, thread
+import ssl, json, socket, struct, binascii, time, thread, logging
 
 debug = True
-# Sets the APNs to sandbox or live
+# Sets the APNs to sandbox (True) or live (False)
 sandbox = True
 # Certification names and/or locations
 liveCert = ''
 devCert = 'LHS_anps_dev.pem'
+
+logFileHandler = 'LHS_APNservice.log'
+logLevel = logging.INFO
 
 MAX_RETRY = 1
 RETRY_STATUS_CODES = [1, 10]
@@ -28,6 +31,14 @@ class APNservice(object):
 		self.__notifBinaryDict = {}
 		self.__failedCounts = {}
 
+		# Setup Logging
+		self.logger = logging.getLogger('LHS_APNservice')
+		hdlr = logging.FileHandler(logFileHandler)
+		formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+		hdlr.setFormatter(formatter)
+		self.logger.addHandler(hdlr) 
+		self.logger.setLevel(logLevel)
+
 	def __recv_data(self, bufferSize, callback):
 		# Receive data from other clients connected to server
 		while 1:
@@ -35,13 +46,13 @@ class APNservice(object):
 				data = self.__sock.recv(bufferSize)
 			except:
 				if debug:
-					print "APNs closed connection, thread exiting."
+					self.logger.warning("APNs closed connection, thread exiting.")
 				thread.interrupt_main()	#Handle the case when server process terminates
 				break
 
 			if not data:
 				if debug:
-					print "APNs closed connection, thread exiting. No data."
+					self.logger.warning("APNs closed connection, thread exiting. No data.")
 				thread.interrupt_main()	# Recv with no data, server closed connection
 				break
 			else:
@@ -55,10 +66,11 @@ class APNservice(object):
 		try:
 			self.__sock.connect(address)
 		except:
-			exit("Failed to connect to socket!")
+			self.logger.error("Failed to connect to socket!")
+			exit()
 
 		if debug:
-			print "Opened socket to: %s" %(str(address))
+			self.logger.info("Opened socket to: %s" %(str(address)))
 
 	# Opens a socket connection to the APNs
 	def __openAPNsConnection(self):
@@ -88,14 +100,14 @@ class APNservice(object):
 		self.__sock.close()
 		self.__sock = None
 		if debug:
-			print "Connection Closed"
+			self.logger.info("Connection Closed")
 
 	def __resetNotifs(self):
 		self.__currentID = 0
 		self.__failedTurple = None
 
 	def __clearFailedTurple(self):
-		print self.__failedCounts
+		self.logger.info(self.__failedCounts)
 		if self.__failedTurple[2] in self.__notifBinaryDict.keys():
 			del self.__notifBinaryDict[self.__failedTurple[2]]
 
@@ -138,7 +150,7 @@ class APNservice(object):
 			notif = self.__notifBinaryDict[notifID]
 			numBytesWritten = self.__sock.send(notif)
 			if debug:
-				print "Number of bytes written: %d" %(numBytesWritten)
+				self.logger.info("Number of bytes written: %d" %(numBytesWritten))
 
 			sentIDsList.append(notifID)
 
@@ -158,8 +170,8 @@ class APNservice(object):
 
 				sentIDsList = list(set(sentIDsList) - set(queueIDsList))
 				if debug:
-					print "Queued IDs: " + repr(queueIDsList)
-					print "  Sent IDs: " + repr(sentIDsList)
+					self.logger.info("Queued IDs: " + repr(queueIDsList))
+					self.logger.info("  Sent IDs: " + repr(sentIDsList))
 
 				for notifIDs in sentIDsList:
 					del self.__notifBinaryDict[notifIDs]
@@ -168,13 +180,13 @@ class APNservice(object):
 
 				# Remove errored notif if not 1 or 10
 				if self.__failedTurple[1] in RETRY_STATUS_CODES:
-					print "Failed ID: %d" % self.__failedTurple[2]
+					self.logger.warning("Failed ID: %d" % self.__failedTurple[2])
 					if self.__failedTurple[2] in self.__failedCounts.keys():
 						failedCount = self.__failedCounts[self.__failedTurple[2]]
 						if failedCount <= MAX_RETRY:
 							self.__failedCounts[self.__failedTurple[2]] = failedCount+1
 							if debug:
-								print "Retry notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1])
+								self.logger.info("Retry notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1]))
 						else:
 							if self.__failedTurple[2] in queueIDsList:
 								queueIDsList.remove(self.__failedTurple[2])
@@ -184,14 +196,14 @@ class APNservice(object):
 
 				else:
 					if debug:
-						print "Notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1])
+						self.logger.warning("Notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1]))
 
 					if self.__failedTurple[2] in queueIDsList:
 						queueIDsList.remove(self.__failedTurple[2])
 					self.__clearFailedTurple()
 
 				if debug:
-					print "Notif Dict Keys: " + repr(self.__notifBinaryDict.keys())
+					self.logger.info("Notif Dict Keys: " + repr(self.__notifBinaryDict.keys()))
 
 				self.__closeConnection()
 
@@ -205,9 +217,6 @@ class APNservice(object):
 		fmt = '!BBI'
 		errorTurple = struct.unpack(fmt, errorBinary)
 
-		if debug:
-			print errorTurple
-
 		self.__failedTurple = errorTurple
 
 	def __recivedFeedback(self, feedbackBinary):
@@ -216,7 +225,7 @@ class APNservice(object):
 			numOfChunks += 1
 
 		if debug:
-			print "Number of chunks: %d" %numOfChunks
+			self.logger.info("Number of chunks: %d" %numOfChunks)
 		feedbackTupleList = []
 
 		if len(feedbackBinary) > 38:
@@ -233,7 +242,7 @@ class APNservice(object):
 			feedbackTupleList.append(feedbackTuple)
 
 		if debug:
-			print feedbackTupleList
+			self.logger.info(feedbackTupleList)
 
 	def __unpackFeedbackTurple(self, data):
 		fmt = '!IH32s'

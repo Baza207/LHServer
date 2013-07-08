@@ -16,7 +16,7 @@ sandbox = True
 liveCert = ''
 devCert = 'LHS_anps_dev.pem'
 
-logFileHandler = 'LHS_APNservice.log'
+logFileHandler = '../log/LHS_APNservice.log'
 logLevel = logging.INFO
 
 MAX_RETRY = 1
@@ -32,12 +32,17 @@ class APNservice(object):
 		self.__failedCounts = {}
 
 		# Setup Logging
+		logging.basicConfig(level=logLevel,
+							   format='%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
+							   filename=logFileHandler,
+							   filemode='a')
+		console = logging.StreamHandler()
+		console.setLevel(logLevel)
+		formatter = logging.Formatter('%(name)-12s %(levelname)-8s %(message)s')
+		console.setFormatter(formatter)
 		self.logger = logging.getLogger('LHS_APNservice')
-		hdlr = logging.FileHandler(logFileHandler)
-		formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
-		hdlr.setFormatter(formatter)
-		self.logger.addHandler(hdlr) 
-		self.logger.setLevel(logLevel)
+		self.logger.addHandler(console)
+		self.logger.error('\n\nLHS APNservice\n****************************************\n')
 
 	def __recv_data(self, bufferSize, callback):
 		# Receive data from other clients connected to server

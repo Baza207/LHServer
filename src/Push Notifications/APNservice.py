@@ -8,6 +8,7 @@
 #!/usr/bin/env python
 
 import ssl, json, socket, struct, binascii, time, thread, logging
+import PushNotificationDeviceHandler as deviceHandler
 
 debug = True
 # Sets the APNs to sandbox (True) or live (False)
@@ -17,7 +18,7 @@ liveCert = ''
 devCert = 'LHS_anps_dev.pem'
 
 logFileHandler = '../log/LHS_APNservice.log'
-logLevel = logging.INFO
+logLevel = logging.WARNING
 
 MAX_RETRY = 1
 RETRY_STATUS_CODES = [1, 10]
@@ -27,7 +28,7 @@ class APNservice(object):
 		super(APNservice, self).__init__()
 		self.__sock = None
 		self.__currentID = 0
-		self.__failedTurple = None
+		self.__failedTuple = None
 		self.__notifBinaryDict = {}
 		self.__failedCounts = {}
 
@@ -42,7 +43,6 @@ class APNservice(object):
 		console.setFormatter(formatter)
 		self.logger = logging.getLogger('LHS_APNservice')
 		self.logger.addHandler(console)
-		self.logger.error('\n\nLHS APNservice\n****************************************\n')
 
 	def __recv_data(self, bufferSize, callback):
 		# Receive data from other clients connected to server
@@ -109,17 +109,17 @@ class APNservice(object):
 
 	def __resetNotifs(self):
 		self.__currentID = 0
-		self.__failedTurple = None
+		self.__failedTuple = None
 
-	def __clearFailedTurple(self):
+	def __clearFailedTuple(self):
 		self.logger.info(self.__failedCounts)
-		if self.__failedTurple[2] in self.__notifBinaryDict.keys():
-			del self.__notifBinaryDict[self.__failedTurple[2]]
+		if self.__failedTuple[2] in self.__notifBinaryDict.keys():
+			del self.__notifBinaryDict[self.__failedTuple[2]]
 
-		if self.__failedTurple[2] in self.__failedCounts.keys():
-			del self.__failedCounts[self.__failedTurple[2]]
+		if self.__failedTuple[2] in self.__failedCounts.keys():
+			del self.__failedCounts[self.__failedTuple[2]]
 
-		self.__failedTurple = None
+		self.__failedTuple = None
 
 	# Makes a notification to be sent
 	def __makeNotification(self, id, token, alert, badge, sound, userInfo):
@@ -163,12 +163,12 @@ class APNservice(object):
 			while 1:
 				continue
 		except KeyboardInterrupt:
-			if self.__failedTurple is None:
+			if self.__failedTuple is None:
 				self.__resetNotifs()
 				self.__closeConnection()
 			else:
 				for notifID in sentIDsList:
-					if notifID is not self.__failedTurple[2]:
+					if notifID is not self.__failedTuple[2]:
 						queueIDsList.remove(notifID)
 					else:
 						break
@@ -184,28 +184,28 @@ class APNservice(object):
 				sentIDsList = []
 
 				# Remove errored notif if not 1 or 10
-				if self.__failedTurple[1] in RETRY_STATUS_CODES:
-					self.logger.warning("Failed ID: %d" % self.__failedTurple[2])
-					if self.__failedTurple[2] in self.__failedCounts.keys():
-						failedCount = self.__failedCounts[self.__failedTurple[2]]
+				if self.__failedTuple[1] in RETRY_STATUS_CODES:
+					self.logger.warning("Failed ID: %d" % self.__failedTuple[2])
+					if self.__failedTuple[2] in self.__failedCounts.keys():
+						failedCount = self.__failedCounts[self.__failedTuple[2]]
 						if failedCount <= MAX_RETRY:
-							self.__failedCounts[self.__failedTurple[2]] = failedCount+1
+							self.__failedCounts[self.__failedTuple[2]] = failedCount+1
 							if debug:
-								self.logger.info("Retry notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1]))
+								self.logger.info("Retry notification with ID: %d failed with status: %d" %(self.__failedTuple[2], self.__failedTuple[1]))
 						else:
-							if self.__failedTurple[2] in queueIDsList:
-								queueIDsList.remove(self.__failedTurple[2])
-							self.__clearFailedTurple()
+							if self.__failedTuple[2] in queueIDsList:
+								queueIDsList.remove(self.__failedTuple[2])
+							self.__clearFailedTuple()
 					else:
-						self.__failedCounts[self.__failedTurple[2]] = 1
+						self.__failedCounts[self.__failedTuple[2]] = 1
 
 				else:
 					if debug:
-						self.logger.warning("Notification with ID: %d failed with status: %d" %(self.__failedTurple[2], self.__failedTurple[1]))
+						self.logger.warning("Notification with ID: %d failed with status: %d" %(self.__failedTuple[2], self.__failedTuple[1]))
 
-					if self.__failedTurple[2] in queueIDsList:
-						queueIDsList.remove(self.__failedTurple[2])
-					self.__clearFailedTurple()
+					if self.__failedTuple[2] in queueIDsList:
+						queueIDsList.remove(self.__failedTuple[2])
+					self.__clearFailedTuple()
 
 				if debug:
 					self.logger.info("Notif Dict Keys: " + repr(self.__notifBinaryDict.keys()))
@@ -220,9 +220,9 @@ class APNservice(object):
 
 	def __recivedAPNsError(self, errorBinary):
 		fmt = '!BBI'
-		errorTurple = struct.unpack(fmt, errorBinary)
+		errorTuple = struct.unpack(fmt, errorBinary)
 
-		self.__failedTurple = errorTurple
+		self.__failedTuple = errorTuple
 
 	def __recivedFeedback(self, feedbackBinary):
 		numOfChunks= len(feedbackBinary)/38
@@ -238,18 +238,21 @@ class APNservice(object):
 				startPoint = i*38
 				endPoint = startPoint + 38
 				chunk = feedbackBinary[startPoint: endPoint]
-				feedbackTuple = self.__unpackFeedbackTurple(chunk)
+				feedbackTuple = self.__unpackFeedbackTuple(chunk)
 				# feedbackTuple[2] = binascii.hexlify(feedbackTuple[2])
 				feedbackTupleList.append(feedbackTuple)
 		else:
-			feedbackTuple = self.__unpackFeedbackTurple(feedbackBinary)
+			feedbackTuple = self.__unpackFeedbackTuple(feedbackBinary)
 			# feedbackTuple[2] = binascii.hexlify(feedbackTuple[2])
 			feedbackTupleList.append(feedbackTuple)
 
 		if debug:
 			self.logger.info(feedbackTupleList)
 
-	def __unpackFeedbackTurple(self, data):
+		for feedbackTuple in feedbackTupleList:
+			deviceHandler.removeFeedbackDevice(feedbackTuple)
+
+	def __unpackFeedbackTuple(self, data):
 		fmt = '!IH32s'
 		feedbackTuple = struct.unpack(fmt, data)
 		return feedbackTuple
@@ -260,7 +263,7 @@ class APNservice(object):
 
 		for token in tokens:
 			if len(token) > 0:
-				badge = 1 # TODO: Increment badge number for token in database
+				badge = deviceHandler.incrementBadge(token)
 				notif = self.__makeNotification(self.__currentID, token, alert, badge, sound, None)
 				self.__notifBinaryDict[self.__currentID] = notif
 				self.__currentID += 1
